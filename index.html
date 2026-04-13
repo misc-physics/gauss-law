@@ -1,41 +1,1056 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Electric Flux — Study</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600&display=swap');
 
-  <!-- Critical for iPad -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  :root {
+    --bg: #020a14;
+    --panel: #030d1a;
+    --electric: #00d4ff;
+    --hot: #ff6b35;
+    --gold: #ffd700;
+    --green: #39ff14;
+    --pink: #ff2d78;
+    --border: rgba(0,212,255,0.25);
+    --glow: 0 0 20px rgba(0,212,255,0.4);
+    --divider: rgba(0,212,255,0.3);
+  }
 
-  <title>Whiteboard</title>
+  * { margin:0; padding:0; box-sizing:border-box; }
 
-  <link rel="stylesheet" href="style.css">
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    font-family: 'Exo 2', sans-serif;
+    touch-action: none;
+  }
+
+  /* ===== LAYOUT ===== */
+  #app {
+    display: flex;
+    width: 100%; height: 100%;
+    flex-direction: row;
+  }
+
+  #left-pane {
+    width: 50%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    border-right: 2px solid var(--divider);
+    box-shadow: 2px 0 18px rgba(0,212,255,0.1);
+    background: #000;
+    position: relative;
+  }
+
+  #right-pane {
+    width: 50%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    background: var(--bg);
+  }
+
+  /* ===== TOOLBAR ===== */
+  #toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background: #0a0a0a;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+
+  .tool-btn {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    background: #1a1a1a;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    cursor: pointer;
+    color: #ccc;
+    font-size: 16px;
+    transition: all 0.18s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .tool-btn:active, .tool-btn.active {
+    background: rgba(0,212,255,0.2);
+    border-color: #00d4ff;
+    color: #00d4ff;
+  }
+  .tool-btn:hover { background: #2a2a2a; }
+
+  .tool-sep {
+    width: 1px; height: 28px;
+    background: rgba(255,255,255,0.1);
+    flex-shrink: 0;
+  }
+
+  /* Colour swatches */
+  #color-picker-wrap {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+  .swatch {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .swatch.active { border-color: #fff; transform: scale(1.25); }
+
+  /* Thickness slider */
+  #thickness-wrap {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  #thickness-wrap span { font-size: 10px; color: #888; white-space: nowrap; }
+  #thickness-slider {
+    -webkit-appearance: none;
+    width: 72px; height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px; outline: none;
+  }
+  #thickness-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #00d4ff;
+    box-shadow: 0 0 6px #00d4ff;
+    cursor: pointer;
+  }
+
+  /* Zoom display */
+  #zoom-label {
+    font-size: 10px;
+    color: rgba(0,212,255,0.7);
+    font-family: 'Share Tech Mono', monospace;
+    white-space: nowrap;
+    min-width: 42px;
+    text-align: center;
+  }
+
+  /* ===== CANVAS ===== */
+  #canvas-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    cursor: crosshair;
+    touch-action: none;
+  }
+
+  #drawing-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    touch-action: none;
+  }
+
+  /* ===== RIGHT PANE: Electric Flux content ===== */
+  #right-pane {
+    color: #cde8ff;
+  }
+
+  header {
+    text-align: center;
+    padding: 18px 16px 8px;
+    position: relative;
+  }
+  header::after {
+    content: '';
+    display: block;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--electric), transparent);
+    margin-top: 14px;
+  }
+  header h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1rem, 3vw, 1.8rem);
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    background: linear-gradient(135deg, #00d4ff, #7df9ff, #ffffff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 10px rgba(0,212,255,0.5));
+  }
+  header p {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: rgba(0,212,255,0.6);
+    letter-spacing: 0.15em;
+    margin-top: 5px;
+  }
+
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    padding: 10px 8px 0;
+    flex-wrap: wrap;
+  }
+  .tab {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    background: rgba(0,212,255,0.04);
+    color: rgba(0,212,255,0.55);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tab:hover { color: var(--electric); border-color: var(--electric); background: rgba(0,212,255,0.1); }
+  .tab.active {
+    color: var(--bg); background: var(--electric);
+    border-color: var(--electric);
+    box-shadow: 0 0 14px rgba(0,212,255,0.4);
+  }
+
+  .panel { display: none; padding: 14px 12px 24px; }
+  .panel.active { display: block; }
+
+  .scene-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  canvas.viz { width: 100%; border: 1px solid var(--border); border-radius: 4px;
+    background: #020c18; box-shadow: var(--glow); display: block; }
+
+  .info-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .info-card h2 {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 0.12em; color: var(--electric);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border); padding-bottom: 6px;
+  }
+  .formula-box {
+    background: rgba(0,212,255,0.06);
+    border-left: 3px solid var(--electric);
+    padding: 8px 10px; border-radius: 2px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.95rem; color: #7df9ff; text-align: center;
+  }
+  .formula-box .sub { font-size: 0.6rem; color: rgba(0,212,255,0.55); display: block; margin-top: 3px; letter-spacing: 0.05em; }
+  .key-facts { display: flex; flex-direction: column; gap: 6px; }
+  .fact { display: flex; align-items: flex-start; gap: 7px; font-size: 0.72rem; line-height: 1.45; color: #8ec8e8; }
+  .fact .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--electric); margin-top: 4px; flex-shrink: 0; box-shadow: 0 0 5px var(--electric); }
+  .slider-group { display: flex; flex-direction: column; gap: 8px; }
+  .slider-row { display: flex; flex-direction: column; gap: 3px; }
+  .slider-row label { font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; color: rgba(0,212,255,0.6); letter-spacing: 0.06em; }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; background: rgba(0,212,255,0.2); border-radius: 2px; outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--electric); box-shadow: 0 0 7px var(--electric); cursor: pointer; }
+  .val-badge { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: var(--gold); text-align: right; }
+  .flux-meter { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 3px; padding: 8px; text-align: center; }
+  .flux-meter .label { font-family: 'Share Tech Mono', monospace; font-size: 0.58rem; color: rgba(0,212,255,0.5); letter-spacing: 0.08em; margin-bottom: 3px; }
+  .flux-meter .value { font-family: 'Orbitron', monospace; font-size: 1.1rem; font-weight: 700; color: var(--green); text-shadow: 0 0 12px var(--green); }
+  .gauss-box { background: linear-gradient(135deg,rgba(255,215,0,0.05),rgba(0,212,255,0.05)); border: 1px solid rgba(255,215,0,0.3); border-radius: 3px; padding: 8px 10px; font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; color: var(--gold); text-align: center; letter-spacing: 0.03em; }
+  .gauss-box small { display: block; font-size: 0.58rem; color: rgba(255,215,0,0.5); margin-top: 2px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 7px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.64rem; color: #8ec8e8; }
+  .legend-color { width: 16px; height: 3px; border-radius: 2px; }
+
+  .def-block { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 14px; }
+  .def-title { font-family: 'Orbitron', monospace; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.2em; color: var(--bg); background: var(--electric); padding: 5px 14px; }
+  .def-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .def-text { font-size: 0.76rem; line-height: 1.6; color: #b0d8ef; }
+  .def-text strong { color: #7df9ff; }
+  .def-text em { color: #ffd700; font-style: normal; }
+  .def-steps { display: flex; flex-direction: column; gap: 7px; }
+  .def-step { display: flex; gap: 10px; align-items: flex-start; background: rgba(0,212,255,0.04); border: 1px solid rgba(0,212,255,0.12); border-radius: 4px; padding: 8px 10px; }
+  .step-num { font-family: 'Orbitron', monospace; font-size: 0.9rem; font-weight: 700; color: var(--electric); flex-shrink: 0; line-height: 1; padding-top: 2px; }
+  .step-body { display: flex; flex-direction: column; gap: 2px; }
+  .step-title { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: rgba(0,212,255,0.55); letter-spacing: 0.06em; text-transform: uppercase; }
+  .step-formula { font-family: 'Share Tech Mono', monospace; font-size: 0.9rem; color: #7df9ff; font-weight: bold; }
+  .step-desc { font-size: 0.68rem; color: #8ec8e8; line-height: 1.45; margin-top: 2px; }
+  .def-note { font-size: 0.7rem; line-height: 1.45; color: #ffd700; background: rgba(255,215,0,0.05); border-left: 3px solid #ffd700; padding: 7px 10px; border-radius: 2px; }
+  .def-note strong { color: #ffe766; }
+  .def-canvas-wrap canvas { width: 100%; background: #020c18; display: block; border-top: 1px solid var(--border); }
+</style>
 </head>
-
 <body>
 
-  <!-- Toolbar -->
-  <div id="toolbar">
-    <label>Color</label>
-    <input type="color" id="color" value="#ffffff">
+<div id="app">
 
-    <label>Width</label>
-    <input type="range" id="width" min="1" max="20" value="3">
+  <!-- ===== LEFT: WHITEBOARD ===== -->
+  <div id="left-pane">
+    <div id="toolbar">
+      <!-- Undo / Redo -->
+      <div class="tool-btn" id="btn-undo" title="Undo">↩</div>
+      <div class="tool-btn" id="btn-redo" title="Redo">↪</div>
+      <div class="tool-sep"></div>
 
-    <button id="clear">Clear</button>
+      <!-- Tool: Pen / Eraser -->
+      <div class="tool-btn active" id="btn-pen" title="Pen">✏️</div>
+      <div class="tool-btn" id="btn-eraser" title="Eraser">🧹</div>
+      <div class="tool-sep"></div>
+
+      <!-- Thickness -->
+      <div id="thickness-wrap">
+        <span>╱</span>
+        <input type="range" id="thickness-slider" min="1" max="32" value="4">
+      </div>
+      <div class="tool-sep"></div>
+
+      <!-- Colours -->
+      <div id="color-picker-wrap">
+        <div class="swatch active" style="background:#ffffff" data-color="#ffffff"></div>
+        <div class="swatch" style="background:#00d4ff" data-color="#00d4ff"></div>
+        <div class="swatch" style="background:#39ff14" data-color="#39ff14"></div>
+        <div class="swatch" style="background:#ffd700" data-color="#ffd700"></div>
+        <div class="swatch" style="background:#ff6b35" data-color="#ff6b35"></div>
+        <div class="swatch" style="background:#ff2d78" data-color="#ff2d78"></div>
+      </div>
+      <div class="tool-sep"></div>
+
+      <!-- Zoom -->
+      <div class="tool-btn" id="btn-zoom-out" title="Zoom Out">−</div>
+      <div id="zoom-label">100%</div>
+      <div class="tool-btn" id="btn-zoom-in" title="Zoom In">+</div>
+      <div class="tool-sep"></div>
+
+      <!-- Clear -->
+      <div class="tool-btn" id="btn-clear" title="Clear canvas" style="color:#ff6b35;">🗑</div>
+    </div>
+
+    <div id="canvas-wrap">
+      <canvas id="drawing-canvas"></canvas>
+    </div>
   </div>
 
-  <!-- Drawing Surface -->
-  <canvas id="canvas"></canvas>
+  <!-- ===== RIGHT: ELECTRIC FLUX ===== -->
+  <div id="right-pane">
+    <header>
+      <h1>⚡ ELECTRIC FLUX</h1>
+      <p>GAUSS'S LAW · INTERACTIVE VISUALIZATION</p>
+    </header>
 
-  <!-- Claude Artifact Embed -->
-  <!-- Replace src with your actual artifact link -->
-  <iframe
-    id="artifact"
-    src="https://claude.ai/public/artifacts/b0f3c24c-9d58-4c7a-b0c6-ceb21246358c"
-    allowfullscreen>
-  </iframe>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('intro')">Intro</div>
+      <div class="tab" onclick="switchTab('shell')">Shell</div>
+      <div class="tab" onclick="switchTab('line')">Line</div>
+      <div class="tab" onclick="switchTab('sheet')">Sheet</div>
+      <div class="tab" onclick="switchTab('sphere')">Solid Sphere</div>
+    </div>
 
-  <script src="script.js"></script>
+    <!-- INTRO -->
+    <div class="panel active" id="panel-intro">
+      <div class="def-block">
+        <div class="def-title">DEFINITION</div>
+        <div class="def-body">
+          <p class="def-text"><strong>Electric flux</strong> (Φ) measures how much of an electric field <em>passes through</em> a given surface. Imagine field lines as rain — flux counts how many pass through a tilted net.</p>
+          <div class="def-steps">
+            <div class="def-step">
+              <div class="step-num">①</div>
+              <div class="step-body">
+                <div class="step-title">Uniform field, flat surface</div>
+                <div class="step-formula">Φ = E · A</div>
+                <div class="step-desc">E⃗ perpendicular to surface (θ=0°) — maximum flux.</div>
+              </div>
+            </div>
+            <div class="def-step">
+              <div class="step-num">②</div>
+              <div class="step-body">
+                <div class="step-title">Surface tilted at angle θ</div>
+                <div class="step-formula">Φ = E · A · cos θ</div>
+                <div class="step-desc">θ is between E⃗ and area normal n̂. As θ→90°, flux→0.</div>
+              </div>
+            </div>
+            <div class="def-step">
+              <div class="step-num">③</div>
+              <div class="step-body">
+                <div class="step-title">General (curved surface)</div>
+                <div class="step-formula">Φ = ∮ E⃗ · dA⃗</div>
+                <div class="step-desc">Integrate E⃗ · n̂ dA — foundation of Gauss's Law.</div>
+              </div>
+            </div>
+          </div>
+          <div class="def-note">💡 <strong>Key insight:</strong> Only the component of E⃗ <em>perpendicular</em> to the surface contributes to flux.</div>
+        </div>
+        <div class="def-canvas-wrap"><canvas id="c-def" height="180"></canvas></div>
+      </div>
 
+      <div class="scene-wrap">
+        <canvas id="c-intro" class="viz" height="320"></canvas>
+        <div class="info-card">
+          <h2>Interactive Demo</h2>
+          <div class="formula-box">Φ = E · A · cos θ<span class="sub">tilt the surface to see flux change</span></div>
+          <div class="key-facts">
+            <div class="fact"><div class="dot"></div>Flux counts field lines passing through a surface.</div>
+            <div class="fact"><div class="dot"></div>Max at θ=0°, zero at θ=90°.</div>
+            <div class="fact"><div class="dot"></div>Gauss's law: Φ_total = Q_enc / ε₀</div>
+          </div>
+          <div class="slider-group">
+            <div class="slider-row">
+              <label>TILT θ <span class="val-badge" id="angle-val">0°</span></label>
+              <input type="range" id="angle-slider" min="0" max="90" value="0">
+            </div>
+            <div class="slider-row">
+              <label>FIELD E <span class="val-badge" id="field-val">5</span></label>
+              <input type="range" id="field-slider" min="1" max="10" value="5">
+            </div>
+          </div>
+          <div class="flux-meter">
+            <div class="label">FLUX Φ (normalized)</div>
+            <div class="value" id="flux-val">1.000</div>
+          </div>
+          <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background:#00d4ff"></div>E⃗ Field</div>
+            <div class="legend-item"><div class="legend-color" style="background:#ff6b35"></div>Surface</div>
+            <div class="legend-item"><div class="legend-color" style="background:#39ff14"></div>Normal n̂</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHELL -->
+    <div class="panel" id="panel-shell">
+      <div class="scene-wrap">
+        <canvas id="c-shell" class="viz" height="320"></canvas>
+        <div class="info-card">
+          <h2>Spherical Shell</h2>
+          <div class="formula-box">E = Q / (4πε₀r²)<span class="sub">outside (r > R) · radially outward</span></div>
+          <div class="key-facts">
+            <div class="fact"><div class="dot"></div><strong style="color:#00d4ff">Outside (r > R):</strong> Acts like point charge. E ∝ 1/r².</div>
+            <div class="fact"><div class="dot"></div><strong style="color:#ff6b35">Inside (r &lt; R):</strong> E = 0. No enclosed charge.</div>
+          </div>
+          <div class="slider-group">
+            <div class="slider-row">
+              <label>GAUSSIAN RADIUS r <span class="val-badge" id="shell-r-val">1.8R</span></label>
+              <input type="range" id="shell-r" min="20" max="200" value="120">
+            </div>
+          </div>
+          <div class="flux-meter">
+            <div class="label">ELECTRIC FLUX Φ</div>
+            <div class="value" id="shell-flux">Q/ε₀</div>
+          </div>
+          <div class="gauss-box">Φ = Q_enc/ε₀<small>Gauss's Law</small></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LINE -->
+    <div class="panel" id="panel-line">
+      <div class="scene-wrap">
+        <canvas id="c-line" class="viz" height="320"></canvas>
+        <div class="info-card">
+          <h2>Infinite Line Charge</h2>
+          <div class="formula-box">E = λ / (2πε₀r)<span class="sub">radially outward · λ = charge/length</span></div>
+          <div class="key-facts">
+            <div class="fact"><div class="dot"></div>Gaussian surface: coaxial cylinder of radius r, length L.</div>
+            <div class="fact"><div class="dot"></div>Flux only through curved side; caps = zero.</div>
+            <div class="fact"><div class="dot"></div>E ∝ 1/r (not 1/r² like a point charge).</div>
+          </div>
+          <div class="slider-group">
+            <div class="slider-row">
+              <label>RADIAL DISTANCE r <span class="val-badge" id="line-r-val">2.0</span></label>
+              <input type="range" id="line-r" min="30" max="160" value="80">
+            </div>
+          </div>
+          <div class="flux-meter">
+            <div class="label">ELECTRIC FIELD E</div>
+            <div class="value" id="line-flux">λ/(2πε₀r)</div>
+          </div>
+          <div class="gauss-box">Φ = λL / ε₀<small>for length L of Gaussian cylinder</small></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHEET -->
+    <div class="panel" id="panel-sheet">
+      <div class="scene-wrap">
+        <canvas id="c-sheet" class="viz" height="320"></canvas>
+        <div class="info-card">
+          <h2>Infinite Sheet of Charge</h2>
+          <div class="formula-box">E = σ / (2ε₀)<span class="sub">uniform · independent of distance!</span></div>
+          <div class="key-facts">
+            <div class="fact"><div class="dot"></div>Gaussian surface: pillbox straddling the sheet.</div>
+            <div class="fact"><div class="dot"></div>Flux only through the two flat caps.</div>
+            <div class="fact"><div class="dot"></div>Field is <em style="color:#ffd700">uniform</em> — doesn't decay with distance!</div>
+          </div>
+          <div class="slider-group">
+            <div class="slider-row">
+              <label>CHARGE DENSITY σ <span class="val-badge" id="sheet-sigma-val">5</span></label>
+              <input type="range" id="sheet-sigma" min="1" max="10" value="5">
+            </div>
+          </div>
+          <div class="flux-meter">
+            <div class="label">ELECTRIC FIELD E</div>
+            <div class="value" id="sheet-flux">σ/2ε₀</div>
+          </div>
+          <div class="gauss-box">Φ = σA / ε₀ = 2EA<small>both caps combined</small></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOLID SPHERE -->
+    <div class="panel" id="panel-sphere">
+      <div class="scene-wrap">
+        <canvas id="c-sphere" class="viz" height="320"></canvas>
+        <div class="info-card">
+          <h2>Uniformly Charged Solid Sphere</h2>
+          <div class="formula-box" id="sphere-formula">E = Qr / (4πε₀R³)<span class="sub">inside (r &lt; R) · E ∝ r</span></div>
+          <div class="key-facts">
+            <div class="fact"><div class="dot"></div><strong style="color:#ff6b35">Inside (r &lt; R):</strong> E grows linearly with r.</div>
+            <div class="fact"><div class="dot"></div><strong style="color:#00d4ff">Outside (r > R):</strong> Same as point charge.</div>
+            <div class="fact"><div class="dot"></div>E is maximum at the surface (r = R).</div>
+          </div>
+          <div class="slider-group">
+            <div class="slider-row">
+              <label>GAUSSIAN RADIUS r <span class="val-badge" id="sphere-r-val">0.6R</span></label>
+              <input type="range" id="sphere-r" min="10" max="200" value="55">
+            </div>
+          </div>
+          <div class="flux-meter">
+            <div class="label">FIELD REGION</div>
+            <div class="value" id="sphere-region" style="font-size:0.9rem">INSIDE</div>
+          </div>
+          <div class="gauss-box" id="sphere-gauss">Φ = Qr³/(ε₀R³)<small>enclosed charge ∝ r³</small></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /right-pane -->
+</div><!-- /app -->
+
+<script>
+// ============================================================
+//  WHITEBOARD
+// ============================================================
+(function(){
+  const wrap   = document.getElementById('canvas-wrap');
+  const canvas = document.getElementById('drawing-canvas');
+  const ctx    = canvas.getContext('2d');
+
+  let zoom     = 1.0;
+  let panX     = 0, panY = 0;
+  let color    = '#ffffff';
+  let thickness= 4;
+  let tool     = 'pen'; // 'pen' | 'eraser'
+
+  // History
+  let history  = [];
+  let redoStack= [];
+  const MAX_HISTORY = 40;
+
+  // Drawing state
+  let isDrawing = false;
+  let lastX = 0, lastY = 0;
+  let activeTouches = {};
+
+  // Infinite virtual canvas — we draw on a large offscreen canvas
+  // and transform the visible canvas via ctx transforms.
+  const VIRT_W = 4000, VIRT_H = 4000;
+  const offscreen = document.createElement('canvas');
+  offscreen.width  = VIRT_W;
+  offscreen.height = VIRT_H;
+  const offCtx = offscreen.getContext('2d');
+  offCtx.fillStyle = '#000000';
+  offCtx.fillRect(0,0,VIRT_W,VIRT_H);
+
+  function resizeCanvas(){
+    canvas.width  = wrap.clientWidth;
+    canvas.height = wrap.clientHeight;
+    render();
+  }
+
+  function render(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.save();
+    ctx.translate(panX, panY);
+    ctx.scale(zoom, zoom);
+    ctx.drawImage(offscreen, 0, 0);
+    ctx.restore();
+  }
+
+  // Save state to history
+  function saveHistory(){
+    const data = offCtx.getImageData(0,0,VIRT_W,VIRT_H);
+    history.push(data);
+    if(history.length > MAX_HISTORY) history.shift();
+    redoStack = [];
+  }
+
+  // Pointer → virtual canvas coords
+  function toVirt(px, py){
+    return [(px - panX) / zoom, (py - panY) / zoom];
+  }
+
+  function startDraw(px, py){
+    saveHistory();
+    isDrawing = true;
+    [lastX, lastY] = toVirt(px, py);
+    offCtx.beginPath();
+    offCtx.moveTo(lastX, lastY);
+  }
+
+  function moveDraw(px, py){
+    if(!isDrawing) return;
+    const [vx, vy] = toVirt(px, py);
+    offCtx.lineWidth   = tool==='eraser' ? thickness*4 : thickness;
+    offCtx.lineCap     = 'round';
+    offCtx.lineJoin    = 'round';
+    offCtx.strokeStyle = tool==='eraser' ? '#000000' : color;
+    offCtx.globalCompositeOperation = tool==='eraser' ? 'source-over' : 'source-over';
+    offCtx.beginPath();
+    offCtx.moveTo(lastX, lastY);
+    offCtx.lineTo(vx, vy);
+    offCtx.stroke();
+    lastX = vx; lastY = vy;
+    render();
+  }
+
+  function endDraw(){ isDrawing = false; }
+
+  // ---- Mouse events ----
+  canvas.addEventListener('mousedown', e=>{
+    if(e.button!==0) return;
+    startDraw(e.offsetX, e.offsetY);
+  });
+  canvas.addEventListener('mousemove', e=>{
+    moveDraw(e.offsetX, e.offsetY);
+  });
+  canvas.addEventListener('mouseup',   endDraw);
+  canvas.addEventListener('mouseleave',endDraw);
+
+  // ---- Touch events ----
+  canvas.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    if(e.touches.length === 1){
+      const t = e.touches[0];
+      const r = canvas.getBoundingClientRect();
+      startDraw(t.clientX - r.left, t.clientY - r.top);
+    } else if(e.touches.length === 2){
+      // two-finger pan/pinch: record initial state
+      isDrawing = false;
+      const t0 = e.touches[0], t1 = e.touches[1];
+      const r  = canvas.getBoundingClientRect();
+      activeTouches.x0 = t0.clientX - r.left;
+      activeTouches.y0 = t0.clientY - r.top;
+      activeTouches.x1 = t1.clientX - r.left;
+      activeTouches.y1 = t1.clientY - r.top;
+      activeTouches.initDist = Math.hypot(activeTouches.x1-activeTouches.x0, activeTouches.y1-activeTouches.y0);
+      activeTouches.initZoom = zoom;
+      activeTouches.initPanX = panX;
+      activeTouches.initPanY = panY;
+      activeTouches.midX = (activeTouches.x0+activeTouches.x1)/2;
+      activeTouches.midY = (activeTouches.y0+activeTouches.y1)/2;
+    }
+  },{passive:false});
+
+  canvas.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    if(e.touches.length === 1){
+      const t = e.touches[0];
+      const r = canvas.getBoundingClientRect();
+      moveDraw(t.clientX - r.left, t.clientY - r.top);
+    } else if(e.touches.length === 2){
+      const t0 = e.touches[0], t1 = e.touches[1];
+      const r  = canvas.getBoundingClientRect();
+      const cx0 = t0.clientX-r.left, cy0 = t0.clientY-r.top;
+      const cx1 = t1.clientX-r.left, cy1 = t1.clientY-r.top;
+      const dist = Math.hypot(cx1-cx0, cy1-cy0);
+      const midX = (cx0+cx1)/2, midY = (cy0+cy1)/2;
+
+      // Pinch zoom
+      const newZoom = Math.min(4, Math.max(0.25, activeTouches.initZoom * (dist / activeTouches.initDist)));
+
+      // Pan: adjust so midpoint stays fixed in virtual space
+      const virtMidX = (activeTouches.midX - activeTouches.initPanX) / activeTouches.initZoom;
+      const virtMidY = (activeTouches.midY - activeTouches.initPanY) / activeTouches.initZoom;
+      panX = midX - virtMidX * newZoom;
+      panY = midY - virtMidY * newZoom;
+      zoom = newZoom;
+      updateZoomLabel();
+      render();
+    }
+  },{passive:false});
+
+  canvas.addEventListener('touchend', e=>{ if(e.touches.length===0) endDraw(); },{passive:false});
+
+  // ---- Toolbar buttons ----
+  document.getElementById('btn-undo').addEventListener('click',()=>{
+    if(history.length===0) return;
+    redoStack.push(offCtx.getImageData(0,0,VIRT_W,VIRT_H));
+    offCtx.putImageData(history.pop(),0,0);
+    render();
+  });
+  document.getElementById('btn-redo').addEventListener('click',()=>{
+    if(redoStack.length===0) return;
+    history.push(offCtx.getImageData(0,0,VIRT_W,VIRT_H));
+    offCtx.putImageData(redoStack.pop(),0,0);
+    render();
+  });
+
+  document.getElementById('btn-pen').addEventListener('click',()=>{
+    tool='pen';
+    document.getElementById('btn-pen').classList.add('active');
+    document.getElementById('btn-eraser').classList.remove('active');
+  });
+  document.getElementById('btn-eraser').addEventListener('click',()=>{
+    tool='eraser';
+    document.getElementById('btn-eraser').classList.add('active');
+    document.getElementById('btn-pen').classList.remove('active');
+  });
+
+  document.getElementById('thickness-slider').addEventListener('input', e=>{
+    thickness = +e.target.value;
+  });
+
+  document.querySelectorAll('.swatch').forEach(sw=>{
+    sw.addEventListener('click',()=>{
+      document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active'));
+      sw.classList.add('active');
+      color = sw.dataset.color;
+      tool = 'pen';
+      document.getElementById('btn-pen').classList.add('active');
+      document.getElementById('btn-eraser').classList.remove('active');
+    });
+  });
+
+  function updateZoomLabel(){
+    document.getElementById('zoom-label').textContent = Math.round(zoom*100)+'%';
+  }
+
+  document.getElementById('btn-zoom-in').addEventListener('click',()=>{
+    zoom = Math.min(4, zoom + 0.25);
+    updateZoomLabel(); render();
+  });
+  document.getElementById('btn-zoom-out').addEventListener('click',()=>{
+    zoom = Math.max(0.25, zoom - 0.25);
+    updateZoomLabel(); render();
+  });
+
+  document.getElementById('btn-clear').addEventListener('click',()=>{
+    if(!confirm('Clear the whiteboard?')) return;
+    saveHistory();
+    offCtx.fillStyle='#000';
+    offCtx.fillRect(0,0,VIRT_W,VIRT_H);
+    render();
+  });
+
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+})();
+
+// ============================================================
+//  TAB SWITCH
+// ============================================================
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const names=['intro','shell','line','sheet','sphere'];
+    t.classList.toggle('active', names[i]===name);
+  });
+  document.querySelectorAll('.panel').forEach(p=>{
+    p.classList.toggle('active', p.id==='panel-'+name);
+  });
+}
+
+// ============================================================
+//  VIZ HELPERS
+// ============================================================
+function arrow(ctx,x1,y1,x2,y2,color,w=1.5){
+  const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
+  if(len<2)return;
+  const ux=dx/len,uy=dy/len,hw=5,hl=10;
+  ctx.save();
+  ctx.strokeStyle=color;ctx.lineWidth=w;ctx.shadowColor=color;ctx.shadowBlur=5;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2-ux*hl,y2-uy*hl);ctx.stroke();
+  ctx.fillStyle=color;
+  ctx.beginPath();ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-ux*hl-uy*hw,y2-uy*hl+ux*hw);
+  ctx.lineTo(x2-ux*hl+uy*hw,y2-uy*hl-ux*hw);
+  ctx.fill();ctx.restore();
+}
+function dashedCircle(ctx,cx,cy,r,col){
+  ctx.save();ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+  ctx.shadowColor=col;ctx.shadowBlur=8;
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();ctx.restore();
+}
+function getSize(canvas){ return {W:canvas.width||canvas.offsetWidth, H:canvas.height||canvas.offsetHeight}; }
+
+// ============================================================
+//  DEF DIAGRAM
+// ============================================================
+(function(){
+  const canvas=document.getElementById('c-def');
+  const ctx=canvas.getContext('2d');
+  let tDeg=0,dir=1;
+  function draw(){
+    const W=canvas.offsetWidth;
+    canvas.width=W;canvas.height=180;
+    ctx.clearRect(0,0,W,180);
+    const cx=W/2,cy=95,theta=tDeg*Math.PI/180;
+    // field lines
+    for(let r=-3;r<=3;r++){
+      const y=cy+r*22;
+      ctx.save();ctx.globalAlpha=0.5;
+      arrow(ctx,12,y,W-12,y,'#00d4ff',1.4);ctx.restore();
+    }
+    // surface
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(theta);
+    ctx.fillStyle='rgba(255,107,53,0.12)';ctx.fillRect(-70,-8,140,16);
+    ctx.strokeStyle='#ff6b35';ctx.lineWidth=2;ctx.shadowColor='#ff6b35';ctx.shadowBlur=10;
+    ctx.strokeRect(-70,-8,140,16);ctx.restore();
+    // normal
+    const na=theta-Math.PI/2;
+    arrow(ctx,cx,cy,cx+Math.cos(na)*60,cy+Math.sin(na)*60,'#39ff14',2);
+    ctx.font='bold 11px Share Tech Mono';ctx.fillStyle='#39ff14';ctx.shadowColor='#39ff14';ctx.shadowBlur=6;
+    ctx.fillText('n̂',cx+Math.cos(na)*66,cy+Math.sin(na)*66+4);
+    // angle arc
+    if(tDeg>2){
+      ctx.save();ctx.strokeStyle='#ffd700';ctx.lineWidth=1.2;ctx.shadowColor='#ffd700';ctx.shadowBlur=6;
+      ctx.beginPath();ctx.arc(cx,cy,30,Math.min(0,na),Math.max(0,na));ctx.stroke();
+      const ma=(na)/2;
+      ctx.font='11px Share Tech Mono';ctx.fillStyle='#ffd700';
+      ctx.fillText('θ',cx+Math.cos(ma)*40,cy+Math.sin(ma)*40+3);ctx.restore();
+    }
+    ctx.font='10px Share Tech Mono';ctx.fillStyle='rgba(57,255,20,0.85)';ctx.textAlign='center';ctx.shadowBlur=0;
+    ctx.fillText('Φ = EA·cos('+tDeg+'°) = EA·'+Math.cos(theta).toFixed(2),W/2,172);
+    tDeg+=0.4*dir; if(tDeg>=90)dir=-1; if(tDeg<=0)dir=1;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ============================================================
+//  INTRO SCENE
+// ============================================================
+(function(){
+  const canvas=document.getElementById('c-intro');
+  const ctx=canvas.getContext('2d');
+  let angle=0,strength=5,t=0;
+  document.getElementById('angle-slider').oninput=e=>{
+    angle=+e.target.value;
+    document.getElementById('angle-val').textContent=angle+'°';
+    document.getElementById('flux-val').textContent=(Math.cos(angle*Math.PI/180)*strength/10).toFixed(3);
+  };
+  document.getElementById('field-slider').oninput=e=>{
+    strength=+e.target.value;
+    document.getElementById('field-val').textContent=strength;
+    document.getElementById('flux-val').textContent=(Math.cos(angle*Math.PI/180)*strength/10).toFixed(3);
+  };
+  function draw(){
+    const W=canvas.offsetWidth;canvas.width=W;canvas.height=320;
+    ctx.clearRect(0,0,W,320);
+    const cx=W/2,cy=165,rad=angle*Math.PI/180;
+    ctx.save();ctx.strokeStyle='rgba(0,212,255,0.05)';ctx.lineWidth=1;
+    for(let x=0;x<W;x+=25){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,320);ctx.stroke();}
+    for(let y=0;y<320;y+=25){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    ctx.restore();
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(rad);
+    ctx.strokeStyle='#ff6b35';ctx.lineWidth=2;ctx.shadowColor='#ff6b35';ctx.shadowBlur=10;
+    ctx.strokeRect(-100,-60,200,120);
+    ctx.fillStyle='rgba(255,107,53,0.07)';ctx.fillRect(-100,-60,200,120);ctx.restore();
+    const nx=cx+Math.cos(rad-Math.PI/2)*60,ny=cy+Math.sin(rad-Math.PI/2)*60;
+    arrow(ctx,cx,cy,nx,ny,'#39ff14',2);
+    ctx.font='bold 12px Share Tech Mono';ctx.fillStyle='#39ff14';ctx.fillText('n̂',nx+7,ny);
+    const flux=Math.abs(Math.cos(rad));
+    for(let i=-3;i<=3;i++){
+      const lx=cx+i*28;
+      ctx.save();ctx.globalAlpha=0.2+flux*0.65;
+      arrow(ctx,lx,cy-140+(t*50%280),lx,cy-140+(t*50%280)+70,'#00d4ff',1.3+strength/12);ctx.restore();
+    }
+    ctx.font='13px Share Tech Mono';ctx.fillStyle='rgba(0,212,255,0.7)';
+    ctx.fillText('θ='+angle+'°',cx+30,cy-40);
+    t+=0.015;requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ============================================================
+//  SHELL SCENE
+// ============================================================
+(function(){
+  const canvas=document.getElementById('c-shell');const ctx=canvas.getContext('2d');
+  let rS=120,t=0;
+  document.getElementById('shell-r').oninput=e=>{
+    rS=+e.target.value;const R=70;const inside=rS<R;
+    document.getElementById('shell-r-val').textContent=(rS/R).toFixed(1)+'R';
+    document.getElementById('shell-flux').textContent=inside?'0':'Q/ε₀';
+  };
+  function draw(){
+    const W=canvas.offsetWidth;canvas.width=W;canvas.height=320;ctx.clearRect(0,0,W,320);
+    const cx=W/2,cy=165,R=70,gauR=rS,inside=gauR<R;
+    ctx.save();ctx.strokeStyle='#7df9ff';ctx.lineWidth=3;ctx.shadowColor='#00d4ff';ctx.shadowBlur=18;
+    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='rgba(0,212,255,0.04)';ctx.fill();ctx.restore();
+    for(let i=0;i<20;i++){
+      const a=i/20*Math.PI*2;
+      ctx.beginPath();ctx.arc(cx+Math.cos(a)*R,cy+Math.sin(a)*R,2.5,0,Math.PI*2);
+      ctx.fillStyle='#ffd700';ctx.shadowColor='#ffd700';ctx.shadowBlur=6;ctx.fill();
+    }
+    dashedCircle(ctx,cx,cy,gauR,inside?'#ff2d78':'#39ff14');
+    if(!inside){
+      for(let i=0;i<10;i++){
+        const a=i/10*Math.PI*2+t*0.3,r1=R+5,r2=gauR-5;
+        if(r2>r1+10){arrow(ctx,cx+Math.cos(a)*r1,cy+Math.sin(a)*r1,cx+Math.cos(a)*r2,cy+Math.sin(a)*r2,'#00d4ff',1.3);}
+      }
+    } else {
+      ctx.save();ctx.font='bold 15px Orbitron';ctx.fillStyle='#ff2d78';ctx.shadowColor='#ff2d78';ctx.shadowBlur=10;
+      ctx.textAlign='center';ctx.fillText('E = 0 INSIDE',cx,cy+5);ctx.restore();
+    }
+    t+=0.01;requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ============================================================
+//  LINE SCENE
+// ============================================================
+(function(){
+  const canvas=document.getElementById('c-line');const ctx=canvas.getContext('2d');
+  let rS=80,t=0;
+  document.getElementById('line-r').oninput=e=>{
+    rS=+e.target.value;
+    document.getElementById('line-r-val').textContent=(rS/40).toFixed(1);
+    document.getElementById('line-flux').textContent='λ/(2πε₀·'+(rS/40).toFixed(1)+')';
+  };
+  function draw(){
+    const W=canvas.offsetWidth;canvas.width=W;canvas.height=320;ctx.clearRect(0,0,W,320);
+    const cx=W/2,cy=165,gauR=rS,lH=280;
+    ctx.save();ctx.strokeStyle='#ffd700';ctx.lineWidth=3;ctx.shadowColor='#ffd700';ctx.shadowBlur=18;
+    ctx.beginPath();ctx.moveTo(cx,cy-lH/2);ctx.lineTo(cx,cy+lH/2);ctx.stroke();ctx.restore();
+    const rx=gauR,ry=gauR*0.3;
+    [cy-lH*0.28,cy+lH*0.28].forEach(ey=>{
+      ctx.save();ctx.strokeStyle='rgba(57,255,20,0.45)';ctx.lineWidth=1.3;ctx.setLineDash([5,5]);
+      ctx.shadowColor='#39ff14';ctx.shadowBlur=8;
+      ctx.beginPath();ctx.ellipse(cx,ey,rx,ry,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+    });
+    ctx.save();ctx.strokeStyle='rgba(57,255,20,0.55)';ctx.lineWidth=1.3;ctx.setLineDash([5,5]);
+    ctx.beginPath();ctx.moveTo(cx-rx,cy-lH*0.28);ctx.lineTo(cx-rx,cy+lH*0.28);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx+rx,cy-lH*0.28);ctx.lineTo(cx+rx,cy+lH*0.28);ctx.stroke();ctx.restore();
+    [-90,-45,0,45,90].forEach(dy=>{
+      for(let i=0;i<6;i++){
+        const a=i/6*Math.PI*2+t*0.2;
+        arrow(ctx,cx+Math.cos(a)*8,cy+dy,cx+Math.cos(a)*(gauR-5),cy+dy,'#00d4ff',1.3);
+      }
+    });
+    ctx.save();ctx.strokeStyle='rgba(57,255,20,0.85)';ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.shadowColor='#39ff14';ctx.shadowBlur=10;
+    ctx.beginPath();ctx.arc(cx,cy,gauR,0,Math.PI*2);ctx.stroke();ctx.restore();
+    t+=0.01;requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ============================================================
+//  SHEET SCENE
+// ============================================================
+(function(){
+  const canvas=document.getElementById('c-sheet');const ctx=canvas.getContext('2d');
+  let sigma=5;
+  document.getElementById('sheet-sigma').oninput=e=>{sigma=+e.target.value;document.getElementById('sheet-sigma-val').textContent=sigma;};
+  function draw(){
+    const W=canvas.offsetWidth;canvas.width=W;canvas.height=320;ctx.clearRect(0,0,W,320);
+    const cx=W/2,cy=165,aL=55+sigma*6;
+    ctx.save();ctx.strokeStyle='#ff6b35';ctx.lineWidth=2.5;ctx.shadowColor='#ff6b35';ctx.shadowBlur=14;
+    ctx.beginPath();ctx.moveTo(18,cy);ctx.lineTo(W-18,cy);ctx.stroke();ctx.restore();
+    for(let x=38;x<W-28;x+=38){
+      ctx.font='13px Share Tech Mono';ctx.fillStyle='#ffd700';ctx.shadowColor='#ffd700';ctx.shadowBlur=6;
+      ctx.textAlign='center';ctx.fillText('+',x,cy+5);
+    }
+    const pw=90,ph=55;
+    ctx.save();ctx.strokeStyle='#39ff14';ctx.lineWidth=1.3;ctx.setLineDash([6,5]);ctx.shadowColor='#39ff14';ctx.shadowBlur=8;
+    ctx.strokeRect(cx-pw/2,cy-ph/2,pw,ph);ctx.restore();
+    [-70,-35,0,35,70].forEach(dx=>{
+      arrow(ctx,cx+dx,cy-10,cx+dx,cy-10-aL,'#00d4ff',1.4+sigma*0.08);
+      arrow(ctx,cx+dx,cy+10,cx+dx,cy+10+aL,'#00d4ff',1.4+sigma*0.08);
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ============================================================
+//  SOLID SPHERE SCENE
+// ============================================================
+(function(){
+  const canvas=document.getElementById('c-sphere');const ctx=canvas.getContext('2d');
+  let rS=55,t=0;const R=80;
+  document.getElementById('sphere-r').oninput=e=>{
+    rS=+e.target.value;const inside=rS<R;
+    document.getElementById('sphere-r-val').textContent=(rS/R).toFixed(2)+'R';
+    document.getElementById('sphere-region').textContent=inside?'INSIDE':'OUTSIDE';
+    document.getElementById('sphere-region').style.color=inside?'#ff6b35':'#00d4ff';
+    document.getElementById('sphere-formula').innerHTML=inside?'E = Qr/(4πε₀R³)<span class="sub">inside · E ∝ r</span>':'E = Q/(4πε₀r²)<span class="sub">outside · E ∝ 1/r²</span>';
+    document.getElementById('sphere-gauss').innerHTML=inside?'Φ = Qr³/(ε₀R³)<small>enclosed charge ∝ r³</small>':'Φ = Q/ε₀<small>full charge enclosed</small>';
+  };
+  function draw(){
+    const W=canvas.offsetWidth;canvas.width=W;canvas.height=320;ctx.clearRect(0,0,W,320);
+    const cx=W/2,cy=165,gauR=rS,inside=gauR<R;
+    const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
+    grad.addColorStop(0,'rgba(255,107,53,0.22)');grad.addColorStop(1,'rgba(255,107,53,0.03)');
+    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();
+    ctx.save();ctx.strokeStyle='#ff6b35';ctx.lineWidth=2.5;ctx.shadowColor='#ff6b35';ctx.shadowBlur=18;
+    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();ctx.restore();
+    dashedCircle(ctx,cx,cy,gauR,inside?'#ff2d78':'#39ff14');
+    if(!inside){
+      for(let i=0;i<10;i++){
+        const a=i/10*Math.PI*2+t*0.2;
+        arrow(ctx,cx+Math.cos(a)*(R+4),cy+Math.sin(a)*(R+4),cx+Math.cos(a)*(gauR-4),cy+Math.sin(a)*(gauR-4),'#00d4ff',1.4);
+      }
+    } else {
+      for(let i=0;i<8;i++){
+        const a=i/8*Math.PI*2+t*0.2,r2=gauR-4;
+        if(r2>10) arrow(ctx,cx+Math.cos(a)*4,cy+Math.sin(a)*4,cx+Math.cos(a)*r2,cy+Math.sin(a)*r2,'#ff2d78',1.2);
+      }
+    }
+    // E-r graph
+    const gx=10,gy=10,gw=110,gh=85,Rn=55,maxE=65;
+    ctx.fillStyle='rgba(2,10,20,0.82)';ctx.fillRect(gx,gy,gw,gh);
+    ctx.strokeStyle='rgba(0,212,255,0.18)';ctx.lineWidth=1;ctx.strokeRect(gx,gy,gw,gh);
+    ctx.strokeStyle='rgba(0,212,255,0.35)';ctx.lineWidth=1;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(gx+8,gy+gh-8);ctx.lineTo(gx+gw-4,gy+gh-8);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(gx+8,gy+gh-8);ctx.lineTo(gx+8,gy+4);ctx.stroke();
+    ctx.beginPath();ctx.strokeStyle='#39ff14';ctx.lineWidth=1.6;
+    for(let px=0;px<Rn;px++){
+      const x=gx+8+px*(gw-12)/120,E=(px/Rn)*maxE,y=gy+gh-8-E;
+      px===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    for(let px=Rn;px<120;px++){
+      const x=gx+8+px*(gw-12)/120,E=maxE*Rn*Rn/(px*px+1),y=gy+gh-8-E;
+      ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    const norm=Math.min(gauR,118),gcol=inside?'#ff2d78':'#39ff14';
+    const mE=inside?(norm/Rn)*maxE:maxE*Rn*Rn/(norm*norm+1);
+    const mx=gx+8+norm*(gw-12)/120,my=gy+gh-8-mE;
+    ctx.beginPath();ctx.arc(mx,my,3.5,0,Math.PI*2);
+    ctx.fillStyle=gcol;ctx.shadowColor=gcol;ctx.shadowBlur=8;ctx.fill();
+    ctx.font='8px Share Tech Mono';ctx.fillStyle='rgba(0,212,255,0.5)';ctx.shadowBlur=0;
+    ctx.fillText('r',gx+gw-8,gy+gh);ctx.fillText('E',gx+1,gy+10);
+    t+=0.012;requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
 </body>
 </html>
