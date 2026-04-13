@@ -1,23 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta charset="UTF-8">
+
+  <!-- Critical for iPad -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
   <title>Whiteboard</title>
+
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<div id="toolbar">
-  <input type="color" id="color" value="#ffffff">
-  <input type="range" id="width" min="1" max="20" value="3">
-  <button id="clear">Clear</button>
-</div>
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <label>Color</label>
+    <input type="color" id="color" value="#ffffff">
 
-<canvas id="canvas"></canvas>
+    <label>Width</label>
+    <input type="range" id="width" min="1" max="20" value="3">
 
-<!-- Replace with your Claude artifact URL -->
-<iframe id="artifact" src=""></iframe>
+    <button id="clear">Clear</button>
+  </div>
 
-<script src="script.js"></script>
+  <!-- Drawing Surface -->
+  <canvas id="canvas"></canvas>
+
+  <!-- Claude Artifact Embed -->
+  <!-- Replace src with your actual artifact link -->
+  <iframe
+    id="artifact"
+    src="https://claude.ai/public/artifacts/b0f3c24c-9d58-4c7a-b0c6-ceb21246358c"
+    allowfullscreen>
+  </iframe>
+
+  <script src="script.js"></script>
+
 </body>
 </html>
